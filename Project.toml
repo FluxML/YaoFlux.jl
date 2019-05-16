@@ -1,6 +1,12 @@
 name = "YaoFlux"
 uuid = "e06ad7bc-5795-54bd-b84a-0284c0717521"
 
+[deps]
+LuxurySparse = "d05aeea4-b7d4-55ac-b691-9e7fabb07ba2"
+Yao = "5872b779-8223-5990-8dd0-5abbb0748c8c"
+YaoBase = "a8f54c17-34bc-5a9d-b050-f522fe3f755f"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 

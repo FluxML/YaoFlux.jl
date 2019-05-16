@@ -1,6 +1,7 @@
 using YaoFlux
-using Test
+using Test, LuxurySparse, Zygote, YaoBase
 
-@testset "YaoFlux.jl" begin
-    # Write your own tests here.
-end
+f(x) = real(sum(x * Const.X))
+f'(0.1)
+
+f'(0.1)
