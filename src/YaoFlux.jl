@@ -15,8 +15,6 @@ Zygote.@adjoint BitBasis.onehot(::Type{T}, nbits::Int, x::Integer, nbatch::Int) 
 # upstreams
 Zygote.@adjoint Base.:(-)(a, b) = a-b, Δ -> (Δ, -Δ)
 Zygote.@adjoint Base.:(+)(a, b) = a+b, Δ -> (Δ, Δ)
-Zygote._forward(cx::Context, ::typeof(mapreduce), f, op, xs) = Zygote._forward(cx, x->reduce(op, map(f, x)), xs)
-
 
 # require mutate
 Zygote.@adjoint! function copyto!(xs::AbstractVector, ys::Tuple)
