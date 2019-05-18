@@ -19,7 +19,7 @@ function train()
     return xs
 end
 
-train()
+# train()
 
 
 using Makie, GLMakie, Observables, Colors
@@ -137,14 +137,22 @@ function animate_train()
     end
 
     lines!(scene, lifted; color=:blue, linewidth=5.0)
-    rotate_cam!(scene, 0.1, 0.0, 0.0)
-
+    # scatter!(scene, lifted; color=:black, linewidth=5.0)
+    rotate_cam!(scene, -1.1, 0.0, 0.0)
+    
     opt = ADAM()
-    xs = [0.1, 0.1]
-    for _ in 1:2000
-        sleep(0.01)
+    xs = [0.01, 0.01]
+    for k in 1:1000
+        # sleep(0.001)
         println(fid(xs))
         Optimise.update!(opt, xs, -fid'(xs))
+
+        r = apply!(zero_state(1), chain(Rx(xs[1]), Rz(xs[2])))
+        x, y, z = bloch_arrow(r)
+
+        if k % 10 == 0
+            scatter!(scene, [x], [y], [z]; color=:blue, markersize=0.02)
+        end
         push!(θ, xs[1])
         push!(ϕ, xs[2])
         display(screen, scene)
@@ -152,4 +160,4 @@ function animate_train()
     return scene
 end
 
-animate_train()
+s = animate_train()
