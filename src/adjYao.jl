@@ -23,10 +23,17 @@ end
     PutBlock{N}(block, locs), adjy->(adjy.content, adjy.locs)
 end
 
+@adjoint function ControlBlock{N, BT, C, M}(ctrl_locs, ctrl_config, block, locs) where {N, C, M, BT<:AbstractBlock}
+    ControlBlock{N, BT, C, M}(ctrl_locs, ctrl_config, block, locs),
+    adjy->(adjy.ctrl_locs, adjy.ctrl_config, adjy.content, adjy.locs)
+end
+
 # data projection
 @adjoint function *(sp::Union{SDSparseMatrixCSC, SDDiagonal, SDPermMatrix}, v::AbstractVector)
     sp*v, adjy -> (outer_projection(sp, adjy, v'), sp'*adjy)
 end
+
+@adjoint YaoBlocks.decode_sign(args...) = YaoBlocks.decode_sign(args...), adjy->nothing
 
 @adjoint function *(v::LinearAlgebra.Adjoint{T, V}, sp::Union{SDSparseMatrixCSC, SDDiagonal, SDPermMatrix}) where {T, V<:AbstractVector}
     v*sp, adjy -> (adjy*sp', outer_projection(sp, v', adjy))

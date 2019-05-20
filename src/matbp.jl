@@ -89,6 +89,8 @@ using Test
     @test isapprox(gz'(θ), ng(gz, θ), atol=1e-4)
     gx(x) = (b'*(mat(put(nbit, 2=>Rx(x)))*b))[] |> real
     @test isapprox(gx'(θ), ng(gx, θ), atol=1e-4)
+    cgx(x) = (b'*(mat(control(nbit, 3, 2=>Rx(x)))*b))[] |> real
+    @test isapprox(cgx'(θ), ng(cgx, θ), atol=1e-4)
 end
 
 @testset "csc mul" begin
