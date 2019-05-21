@@ -1,74 +1,8 @@
 include("adjYao.jl")
-using BitBasis: controller, controldo
-using TupleTools
-
-@adjoint function YaoBlocks.cunmat(nbit::Int, cbits::NTuple{C, Int}, cvals::NTuple{C, Int}, U0::AbstractMatrix, locs::NTuple{M, Int}) where {C, M}
-    YaoBlocks.cunmat(nbit, cbits, cvals, U0, locs), adjy-> (nothing, nothing, nothing, adjcunmat(adjy, nbit, cbits, cvals, U0, locs), nothing)
-end
-
-@inline function adjsetcol!(csc::SparseMatrixCSC, icol::Int, rowval::AbstractVector, nzval::SubArray)
-    @inbounds begin
-        S = csc.colptr[icol]
-        E = csc.colptr[icol+1]-1
-        nzval .+= view(csc.nzval, S:E)
-    end
-    csc
-end
-
-@inline function adjsetcol!(csc::SparseMatrixCSC, icol::Int, rowval::AbstractVector, nzval::SubArray)
-    @inbounds begin
-        S = csc.colptr[icol]
-        E = csc.colptr[icol+1]-1
-        nzval .+= view(csc.nzval, S:E)
-    end
-    csc
-end
-
-@inline function adjunij!(mat::SparseMatrixCSC, locs, U::Matrix)
-    for j = 1:size(U, 2)
-        @inbounds adjsetcol!(mat, locs[j], locs, view(U,:,j))
-    end
-    return U
-end
-
-@inline function adjunij!(mat::SDDiagonal, locs, U::Diagonal)
-    @inbounds U.diag .+= mat.diag[locs]
-    return U
-end
-
-function adjcunmat(adjy::AbstractMatrix, nbit::Int, cbits::NTuple{C, Int}, cvals::NTuple{C, Int}, U0::AbstractMatrix{T}, locs::NTuple{M, Int}) where {C, M, T}
-    U, ic, locs_raw = YaoBlocks.reorder_unitary(nbit, cbits, cvals, U0, locs)
-    if !(adjy isa SparseMatrixCSC)
-        adjy = SparseMatrixCSC(adjy)
-    end
-    adjU = zeros(T, size(U0)...)
-
-    colptr = adjy.colptr
-    rowval = adjy.rowval
-
-    ctest = controller(cbits, cvals)
-
-    controldo(ic) do i
-        adjunij!(adjy, locs_raw+i, adjU)
-    end
-
-    adjU = all(TupleTools.diff(locs).>0) ? adjU : reorder(adjU, collect(locs)|>sortperm|>sortperm)
-    adjU
-end
-
-function adjcunmat(adjy::SDDiagonal, nbit::Int, cbits::NTuple{C, Int}, cvals::NTuple{C, Int}, U0::SDDiagonal{T}, locs::NTuple{M, Int}) where {C, M, T}
-    U, ic, locs_raw = YaoBlocks.reorder_unitary(nbit, cbits, cvals, U0, locs)
-    adjU = Diagonal(zeros(T, size(U0, 1)))
-
-    controldo(ic) do i
-        adjunij!(adjy, locs_raw+i, adjU)
-    end
-    return adjU
-end
-
 using Test
 @testset "mat grad" begin
     Random.seed!(5)
+    # rotation block
     ng(f, θ, δ=1e-5) = (f(θ+δ/2) - f(θ-δ/2))/δ
     gg(x::Float64) = sum(mat(ComplexF64, Rx(x))) |> real
     @test isapprox(gg'(0.5), ng(gg, 0.5), atol=1e-4)
@@ -82,16 +16,48 @@ using Test
     gcnot(x::Float64) = sum(mat(rot(ConstGate.CNOT, x))*rd) |> real
     @test isapprox(gcnot'(0.5), ng(gcnot, 0.5), atol=1e-4)
 
-    nbit = 3
+    nbit = 5
     θ = 0.5
     b = randn(ComplexF64, 1<<nbit)
     gz(x) = (b'*(mat(put(nbit, 2=>Rz(x)))*b))[] |> real
     @test isapprox(gz'(θ), ng(gz, θ), atol=1e-4)
     gx(x) = (b'*(mat(put(nbit, 2=>Rx(x)))*b))[] |> real
     @test isapprox(gx'(θ), ng(gx, θ), atol=1e-4)
-    cgx(x) = (b'*(mat(control(nbit, 3, 2=>Rx(x)))*b))[] |> real
-    @test isapprox(cgx'(θ), ng(cgx, θ), atol=1e-4)
+
+    # control block
+    cgn(x) = (b'*(mat(control(nbit, 3, (4,2)=>rot(ConstGate.CNOT, x)))*b))[] |> real
+    @test isapprox(cgn'(θ), ng(cgn, θ), atol=1e-4)
+
+    # Chain Block
+    b = randn(ComplexF64, 2)
+    gctrl(x) = (b'*mat(chain([Rx(x),Ry(x+0.4)]))*b)[] |> real   # collect not correctly defined
+    @show gctrl(0.5)
+    @test isapprox(gctrl'(θ), ng(gctrl, θ), atol=1e-4)
+
+    # Kron Block
+    b = randn(ComplexF64, 4)
+    gkron(x) = (b'*mat(kron(Rx(x),Ry(x+0.4)))*b)[] |> real
+    @show gkron(0.5)
+    #@test isapprox(gkron'(θ), ng(gkron, θ), atol=1e-4)
 end
+
+circuit = chain(2, [put(2, 2=>Rx(0.0)), control(2, 1, 2=>Z), put(2, 2=>Rz(0.0))])
+cnot_mat = mat(control(2, 1, 2=>X)) |> Matrix
+function loss3(params::Vector)
+    dispatch!(circuit, params)
+    M = mat(circuit) |> Matrix
+    norm(M-cnot_mat)
+end
+
+@adjoint function norm(x)
+    y = norm(x)
+    y, adjy->(adjy/y*x,)
+end
+
+gradient_check(norm, randn(3,3))
+
+loss3([0.3, 0.1])
+loss3'([0.3, 0.2])
 
 @testset "csc mul" begin
     Random.seed!(2)
