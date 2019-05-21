@@ -211,6 +211,7 @@ end
 
 function adjcunmat(adjy::AbstractMatrix, nbit::Int, cbits::NTuple{C, Int}, cvals::NTuple{C, Int}, U0::AbstractMatrix{T}, locs::NTuple{M, Int}) where {C, M, T}
     U, ic, locs_raw = YaoBlocks.reorder_unitary(nbit, cbits, cvals, U0, locs)
+    adjy = _render_adjy(adjy, U)
     adjU = _render_adjU(U)
 
     ctest = controller(cbits, cvals)
@@ -222,6 +223,10 @@ function adjcunmat(adjy::AbstractMatrix, nbit::Int, cbits::NTuple{C, Int}, cvals
     adjU = all(TupleTools.diff(locs).>0) ? adjU : YaoBase.reorder(adjU, collect(locs)|>sortperm|>sortperm)
     adjU
 end
+_render_adjy(adjy, U) = adjy
+_render_adjy(adjy::Base.ReshapedArray{T, N, <:SparseMatrixCSC}, U::SDSparseMatrixCSC) where {N,T} = SparseMatrixCSC(adjy)
+_render_adjy(adjy::Base.ReshapedArray{T, N, <:SparseMatrixCSC}, U::SDDiagonal) where {N, T} = Diagonal(adjy)
+_render_adjy(adjy::SparseMatrixCSC, U::SDDiagonal) = Diagonal(adjy)
 
 Base.zero(pm::PermMatrix) = PermMatrix(pm.perm, zero(pm.vals))
 

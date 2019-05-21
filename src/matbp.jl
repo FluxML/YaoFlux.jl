@@ -39,10 +39,20 @@ using Test
     gkron(x) = (b'*mat(kron(Rx(x),Ry(x+0.4)))*b)[] |> real
     @show gkron(0.5)
     #@test isapprox(gkron'(θ), ng(gkron, θ), atol=1e-4)
+
+    v = randn(ComplexF64, 4)
+    circuit = chain(2, [put(2, 2=>Rx(0.0)), control(2, 1, 2=>Z), put(2, 2=>Rz(0.0))])
+    function l1(params::Vector)
+        dispatch!(circuit, params)
+        (v'* mat(circuit) * v)[] |> real
+    end
+    gradient_check(l1, [0.3, 0.6])
 end
 
-circuit = chain(2, [put(2, 2=>Rx(0.0)), control(2, 1, 2=>Z), put(2, 2=>Rz(0.0))])
-cnot_mat = mat(control(2, 1, 2=>X)) |> Matrix
+v = randn(ComplexF64, 4)
+reg = rand_state(4)
+
+cnot_mat = mat(control(2, 1, 2=>X))
 function loss3(params::Vector)
     dispatch!(circuit, params)
     M = mat(circuit) |> Matrix
