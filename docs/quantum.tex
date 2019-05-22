@@ -152,9 +152,9 @@ In this scheme, a parameterized quantum circuit provides a variational ansatz fo
 The VQE algorithm can be summarized as the following diagram
 \begin{figure}[H]
     \begin{center}
-        \includegraphics[width=0.7\columnwidth,trim={0cm 0.5cm 0cm 1cm},clip]{images/VQE-algo.pdf}
+        \includegraphics[width=0.7\columnwidth,trim={0cm 0cm 0.2cm 0cm},clip]{images/vqe-bp.pdf}
     \end{center}
-    \caption{A schetch of VQE algorithm, nodes are objectives and lines indicates information flow.}\label{fig-vqe}
+    \caption{A schetch of VQE algorithm, boxes are objectives and lines indicates data flow. (a) the quantum algorithm, (b) the classical simulation approach with Zygote, the blue lines are backward pass for calculating adjoint automatically.}\label{fig-vqe}
 \end{figure}
 
 The goal of VQE is obtaining the ground state wave function of a model Hamiltonian.
@@ -163,15 +163,16 @@ As concrete example, we apply our automatic differentiation approach on the anti
     H = \frac 1 4 \left[\sum\limits_{\<i,j\>}\sigmai{i}{x} \sigmai{j}{x}+\sigmai{i}{y}\sigmai{j}{y}+\sigmai{i}{z}\sigmai{j}{z}\right],
     \label{eq:heisenberg}
 \end{align}
-where $\<i,j \>$ denotes nearest neighbors pairs, $\sigma{i}{\alpha=x, y, z}$ is a Pauli operator.
+where $\<i,j \>$ denotes nearest neighbors pairs, $\sigmai{i}{\alpha=x, y, z}$ is a Pauli operator.
 
-To obtain the gradient of parameters $\vtheta$ inside a quantum circuit, the quantum differentiable programming approach employs the relation~\cite{Mitarai2018}
+To obtain the gradient of parameters $\vtheta$ inside a quantum circuit, the quantum differentiable programming approach in \Fig{fig-vqe} (a) employs the relation~\cite{Mitarai2018}
 \begin{equation}\label{eq-grad}
     \frac \partial{\partial \theta_i}\<H\>_{\vtheta} = \frac 1 2\left( \langle {H} \rangle_{\vtheta+ \frac \pi 2 \boldsymbol{e}_i} - \langle {H} \rangle_{\vtheta- \frac \pi 2 \boldsymbol{e}_i}\right).
 \end{equation}
 This formula has a similar form to finite difference, but it is exact. Its algorithm complexity a $O(N^2)$.
-In classical simulation, we are able to manipulate the wave functions directly, back propagation would help in decreasing the algorithm complexity to $O(N)$.
+In the classical simulation in \Fig{fig-vqe} (b), we are able to manipulate the wave functions directly, back propagation would help in decreasing the algorithm complexity to $O(N)$.
 
+Simulation code combines Zygote and the package for quantum software 2.0 Yao.jl~\cite{Yao link}.
 \begin{jcode}
 using Yao
 using YaoFlux
