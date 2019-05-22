@@ -145,9 +145,11 @@
 \vspace{0.5cm}
 
 Differentiable programming provides a fresh new approach for quantum simulations.
+\blue{The following text in this paragraph is copied from my previous paper~\cite{Liu2019}, please change the description to avoid potential issues.}
 Studying ground state properties of quantum many-body systems is a promising native application of quantum computers. Given limited qubit resources and noisy realizations of near-term quantum  devices~\cite{Preskill2018, Boixo2018}, a practical approach is to employ the variational quantum eigensolver (VQE)~\cite{Peruzzo2014, Jarrod2016, Wecker2015a, Wecker2015b, McArdle2018, Cao2018, Liu2019}, which runs in a classical-quantum hybrid mode.
-In this scheme, a parameterized quantum circuit provides a variational ansatz for the ground state. A classical optimizer tunes the circuit parameters to reduce the expected energy of the target Hamiltonian of the output quantum state. There were already several small scale experimental demonstrations of VQE for molecules and quantum magnets~\cite{Shen2017, OMalley2016, Kandala2017,Colless2018, Hempel2018}. These early experiments mostly employed gradient free or Bayesian approaches for classical optimization. Recent progress on unbiased gradient estimation on quantum circuits~\cite{Li2017a, Mitarai2018, Liu2018, Verdon2018, Schuld2018, Javier2018, Bergholm2018, Guerreschi2017,Farhi2018,Romero2018,Harrow2019,Dallaire2018} breaks the information bottleneck between classical and quantum processors, thus
-providing a route towards scalable optimization of circuits with a large number of parameters.
+In this scheme, a parameterized quantum circuit provides a variational ansatz for the ground state. A classical optimizer tunes the circuit parameters to reduce the expected energy of the target Hamiltonian of the output quantum state. Recent progress on unbiased gradient estimation on quantum circuits~\cite{Li2017a, Mitarai2018, Liu2018,Nakanishi2019} breaks the information bottleneck between classical and quantum processors, thus providing a route towards scalable optimization of circuits with a large number of parameters.
+
+The VQE algorithm can be summarized as the following diagram
 \begin{figure}[H]
     \begin{center}
         \includegraphics[width=0.7\columnwidth,trim={0cm 0.5cm 0cm 1cm},clip]{images/VQE-algo.pdf}
@@ -155,18 +157,20 @@ providing a route towards scalable optimization of circuits with a large number 
     \caption{A schetch of VQE algorithm, nodes are objectives and lines indicates information flow.}\label{fig-vqe}
 \end{figure}
 
-Quantum differentiable programming approach employs the relation~\cite{Mitarai2018}
-\begin{equation}\label{eq-grad}
-    \frac \partial{\partial \theta_i}\<H\>_{\vtheta} = \frac 1 2\left( \langle {H} \rangle_{\vtheta+ \frac \pi 2 \boldsymbol{e}_i} - \langle {H} \rangle_{\vtheta- \frac \pi 2 \boldsymbol{e}_i}\right).
-\end{equation}
-This formula has a similar form to finite difference, hence is a $O(N^2)$ algorithm. In classical simulation, since we are able manipulate the wavefunctions directly, back propagation would help in decreasing the algorithm complexity to $O(N)$.
-
-As concrete example, we apply our automatic differentiation approach on the anti-ferromagnetic Heisenberg model defined one a chain (a toy model that all physicists like)
+The goal of VQE is obtaining the ground state wave function of a model Hamiltonian.
+As concrete example, we apply our automatic differentiation approach on the anti-ferromagnetic Heisenberg model defined one a chain (a toy model that all physicists like). Its hamiltonian is
 \begin{align}
     H = \frac 1 4 \left[\sum\limits_{\<i,j\>}\sigmai{i}{x} \sigmai{j}{x}+\sigmai{i}{y}\sigmai{j}{y}+\sigmai{i}{z}\sigmai{j}{z}\right],
     \label{eq:heisenberg}
 \end{align}
 where $\<i,j \>$ denotes nearest neighbors pairs, $\sigma{i}{\alpha=x, y, z}$ is a Pauli operator.
+
+To obtain the gradient of parameters $\vtheta$ inside a quantum circuit, the quantum differentiable programming approach employs the relation~\cite{Mitarai2018}
+\begin{equation}\label{eq-grad}
+    \frac \partial{\partial \theta_i}\<H\>_{\vtheta} = \frac 1 2\left( \langle {H} \rangle_{\vtheta+ \frac \pi 2 \boldsymbol{e}_i} - \langle {H} \rangle_{\vtheta- \frac \pi 2 \boldsymbol{e}_i}\right).
+\end{equation}
+This formula has a similar form to finite difference, but it is exact. Its algorithm complexity a $O(N^2)$.
+In classical simulation, we are able to manipulate the wave functions directly, back propagation would help in decreasing the algorithm complexity to $O(N)$.
 
 \begin{jcode}
 using Yao
@@ -174,7 +178,7 @@ using YaoFlux
 using LinearAlgebra
 using QuAlgorithmZoo: heisenberg, random_diff_circuit, pair_ring
 
-# generate a Heisenberg Model Hamiltonian
+# define a AFM-Heisenberg Model Hamiltonian
 nbit = 4
 h = mat(heisenberg(nbit))
 v0 = statevec(zero_state(nbit))
