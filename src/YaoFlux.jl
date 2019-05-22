@@ -1,29 +1,31 @@
 module YaoFlux
 
+using Zygote
+using Zygote: gradient, @adjoint
 using Zygote, LuxurySparse, Yao, YaoBase, SparseArrays, BitBasis
 import Zygote: Context
 
-Zygote.@adjoint (::Type{T})(perms, vals) where T <: PermMatrix = T(perms, vals), Δ -> nothing
-Zygote.@adjoint (::Type{T})() where T <: IMatrix = T(), Δ -> nothing
-Zygote.@adjoint Base.:(*)(A::Number, B::PermMatrix) = A * B, Δ->(sum(Δ .* B), A * Δ)
-Zygote.@adjoint Base.:(*)(A::PermMatrix, B::Number) = A * B, Δ->(A * Δ, sum(Δ .* B))
+using Yao
+using YaoBlocks: ConstGate
+import Yao: apply!, ArrayReg, statevec, RotationGate
 
-Zygote.@adjoint SparseArrays.SparseMatrixCSC(A::PermMatrix) = SparseMatrixCSC(A), Δ->(Δ, )
+using LuxurySparse, SparseArrays, LinearAlgebra
+using BitBasis: controller, controldo
+using TupleTools
 
-Zygote.@adjoint BitBasis.onehot(::Type{T}, nbits::Int, x::Integer, nbatch::Int) where T = onehot(T, nbits, x, nbatch), Δ -> nothing
+export gradient_check, projection, collect_gradients
 
-# upstreams
-Zygote.@adjoint Base.:(-)(a, b) = a-b, Δ -> (Δ, -Δ)
-Zygote.@adjoint Base.:(+)(a, b) = a+b, Δ -> (Δ, Δ)
-
-# require mutate
-Zygote.@adjoint! function copyto!(xs::AbstractVector, ys::Tuple)
-    xs_ = copy(xs)
-    copyto!(xs, ys), function (dxs)
-        copyto!(xs_, xs)
-        return (nothing, Tuple(dxs))
-    end
+"""A safe way of checking gradients"""
+function gradient_check(f, args...; η = 1e-5)
+    g = gradient(f, args...)
+    dy_expect = η*sum(abs2.(g[1]))
+    dy = f(args...)-f([gi == nothing ? arg : arg.-η.*gi for (arg, gi) in zip(args, g)]...)
+    @show dy
+    @show dy_expect
+    isapprox(dy, dy_expect, rtol=1e-2, atol=1e-8)
 end
 
+include("adjbase.jl")
+include("adjYao.jl")
 
 end # module

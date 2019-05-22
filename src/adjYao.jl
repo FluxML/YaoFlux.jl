@@ -74,7 +74,7 @@ end
 end
 
 @inline function adjunij!(mat::SDPermMatrix, locs, U::PermMatrix)
-    @inbounds U.vals .+= pm.vals[locs]
+    @inbounds U.vals .+= mat.vals[locs]
     return U
 end
 
@@ -121,7 +121,7 @@ _render_adjy(adjy, y) = projection(y, adjy)
 _render_adjU(U0::AbstractMatrix{T}) where T = zeros(T, size(U0)...)
 _render_adjU(U0::SDSparseMatrixCSC{T}) where T = SparseMatrixCSC(size(U0)..., dynamicize(U0.colptr), dynamicize(U0.rowval), zeros(T, U0.nzval|>length))
 _render_adjU(U0::SDDiagonal{T}) where T = Diagonal(zeros(T, size(U0, 1)))
-_render_adjU(U0::SDPermMatrix{T}) where T = PermMatrix(U0.perm, zero(U0.vals))
+_render_adjU(U0::SDPermMatrix{T}) where T = PermMatrix(U0.perm, zeros(T, length(U0.vals)))
 
 function collect_gradients(st, out=Any[])
     for blk in st
@@ -132,4 +132,3 @@ end
 
 collect_gradients(st::Number, out=any[]) = push!(out, st)
 collect_gradients(st::Nothing, out=any[]) = out
-collect_gradients(gst)
