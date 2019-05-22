@@ -1,10 +1,10 @@
-# generate a Heisenberg Model Hamiltonian
 using Yao
 using YaoFlux
 using LinearAlgebra
 using QuAlgorithmZoo: heisenberg, random_diff_circuit, pair_ring
 
-nbit = 6
+# generate a Heisenberg Model Hamiltonian
+nbit = 4
 h = mat(heisenberg(nbit))
 v0 = statevec(zero_state(nbit))
 function energy(circuit)
@@ -12,32 +12,31 @@ function energy(circuit)
     (v'* h * v)[] |> real
 end
 
-# a circuit as ansatz
-#circuit = chain(nbit, [put(2, 1=>H), put(2, 2=>H), put(2, 2=>Rz(0.0)), put(2, 2=>Rx(0.0)), control(2, 1, 2=>Z), put(2, 2=>Rx(0.0)), put(2, 2=>Rz(0.0))])
+# Generate a circuit as a wave function ansatz
 circuit = random_diff_circuit(nbit, 2, pair_ring(nbit))
-
-# obtain the energy
-energy(circuit)
-
-# get the gradient with respect to circuit.
-gst = collect_gradients(energy'(circuit))
 
 using Flux: ADAM, Optimise
 function train!(lossfunc, circuit, optimizer; maxiter::Int=200)
     dispatch!(circuit, :random)
     params = parameters(circuit)
+    loss_history = Float64[]
     for i = 1:maxiter
+        # collect gradients from returned structured data
         grad = collect_gradients(lossfunc'(circuit))
         Optimise.update!(optimizer, params, grad)
         dispatch!(circuit, params)
-        println("Iter $i, Loss = $(lossfunc(circuit))")
+        eng = lossfunc(circuit)
+        push!(loss_history, eng)
+        println("Iter $i, Energy (Loss) = $(eng)")
     end
-    circuit
+    loss_history
 end
 
 using Random
 Random.seed!(5)
 EG = eigvals(Matrix(h))[1]
-println("Exact Energy is $EG")
-train!(energy, circuit, ADAM(0.1); maxiter=200)
+println("$nbit site Heisenberg model, exact ground state energy = $EG")
+loss_history = train!(energy, circuit, ADAM(0.1); maxiter=200)
 
+using DelimitedFiles
+writedlm("data/loss_history_$nbit.dat", loss_history)

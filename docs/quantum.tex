@@ -144,9 +144,7 @@
 \maketitle
 \vspace{0.5cm}
 
-\newpage
-
-Differentiable programming provides a fresh new approach for studying quantum systems.
+Differentiable programming provides a fresh new approach for quantum simulations.
 Studying ground state properties of quantum many-body systems is a promising native application of quantum computers. Given limited qubit resources and noisy realizations of near-term quantum  devices~\cite{Preskill2018, Boixo2018}, a practical approach is to employ the variational quantum eigensolver (VQE)~\cite{Peruzzo2014, Jarrod2016, Wecker2015a, Wecker2015b, McArdle2018, Cao2018, Liu2019}, which runs in a classical-quantum hybrid mode.
 In this scheme, a parameterized quantum circuit provides a variational ansatz for the ground state. A classical optimizer tunes the circuit parameters to reduce the expected energy of the target Hamiltonian of the output quantum state. There were already several small scale experimental demonstrations of VQE for molecules and quantum magnets~\cite{Shen2017, OMalley2016, Kandala2017,Colless2018, Hempel2018}. These early experiments mostly employed gradient free or Bayesian approaches for classical optimization. Recent progress on unbiased gradient estimation on quantum circuits~\cite{Li2017a, Mitarai2018, Liu2018, Verdon2018, Schuld2018, Javier2018, Bergholm2018, Guerreschi2017,Farhi2018,Romero2018,Harrow2019,Dallaire2018} breaks the information bottleneck between classical and quantum processors, thus
 providing a route towards scalable optimization of circuits with a large number of parameters.
@@ -157,32 +155,37 @@ Quantum differentiable programming approach employs the relation~\cite{Mitarai20
 \end{equation}
 This formula has a similar form to finite difference, hence is a $O(N^2)$ algorithm. In classical simulation, since we are able manipulate the wavefunctions directly, back propagation would help in decreasing the algorithm complexity to $O(N)$.
 
-As toy example, we
-\begin{jcode}
-# generate a Heisenberg Model Hamiltonian
-using QuAlgorithmZoo: heisenberg
+As concrete example, we apply our automatic differentiation approach on the anti-ferromagnetic Heisenberg model defined one a chain (a toy model that all physicists like)
+\begin{align}
+    H = \frac 1 4 \left[\sum\limits_{\<i,j\>}\sigmai{i}{x} \sigmai{j}{x}+\sigmai{i}{y}\sigmai{j}{y}+\sigmai{i}{z}\sigmai{j}{z}\right],
+    \label{eq:heisenberg}
+\end{align}
+where $\<i,j \>$ denotes nearest neighbors pairs, $\sigma{i}{\alpha=x, y, z}$ is a Pauli operator.
 
-h = mat(heisenberg(2))
-v0 = statevec(zero_state(2))
+\begin{jcode}
+using Yao
+using YaoFlux
+using LinearAlgebra
+using QuAlgorithmZoo: heisenberg, random_diff_circuit, pair_ring
+
+# generate a Heisenberg Model Hamiltonian
+nbit = 4
+h = mat(heisenberg(nbit))
+v0 = statevec(zero_state(nbit))
 function energy(circuit)
     v = mat(circuit) * v0
     (v'* h * v)[] |> real
 end
 
-# a circuit as ansatz
-circuit = chain(2, [put(2, 1=>H), put(2, 2=>H), put(2, 2=>Rz(0.0)), put(2, 2=>Rx(0.0)), control(2, 1, 2=>Z), put(2, 2=>Rx(0.0)), put(2, 2=>Rz(0.0))])
-
-# obtain the energy
-energy(circuit)
-
-# get the gradient with respect to circuit.
-gst = collect_gradients(energy'(circuit))
+# Generate a circuit as a wave function ansatz
+circuit = random_diff_circuit(nbit, 2, pair_ring(nbit))
 
 using Flux: ADAM, Optimise
 function train!(lossfunc, circuit, optimizer; maxiter::Int=200)
     dispatch!(circuit, :random)
     params = parameters(circuit)
     for i = 1:maxiter
+        # collect gradients from returned structured data
         grad = collect_gradients(lossfunc'(circuit))
         Optimise.update!(optimizer, params, grad)
         dispatch!(circuit, params)
@@ -193,11 +196,19 @@ end
 
 using Random
 Random.seed!(5)
-train!(ec4, circuit, ADAM(0.1); maxiter=100)
+EG = eigvals(Matrix(h))[1]
+println("$nbit site Heisenberg model, exact ground state energy = $EG")
+train!(energy, circuit, ADAM(0.1); maxiter=200)
 \end{jcode}
 
 Here, \code{mat(circuit)} returns a complex valued \code{SparseMatrixCSC} matrix, then we back propagate through this sparse matrix, it will return an adjoint with data structure that mimics the block tree in the original \code{Yao.jl} structure. Then we are able to collect gradients easily with \code{collect\_gradients} function.
 The training uses the Adam optimizer in \code{Flux.jl}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth,trim={0cm 0cm 0cm 0cm},clip]{images/fig1.pdf}
+    \caption{Energy as a function training step. The dashed line corresponds to the exact ground state energy.}\label{fig-qftindex}
+\end{figure}
 
 \bibliographystyle{apsrev4-1}
 \bibliography{quantum.bib}
