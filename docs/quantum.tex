@@ -148,6 +148,12 @@ Differentiable programming provides a fresh new approach for quantum simulations
 Studying ground state properties of quantum many-body systems is a promising native application of quantum computers. Given limited qubit resources and noisy realizations of near-term quantum  devices~\cite{Preskill2018, Boixo2018}, a practical approach is to employ the variational quantum eigensolver (VQE)~\cite{Peruzzo2014, Jarrod2016, Wecker2015a, Wecker2015b, McArdle2018, Cao2018, Liu2019}, which runs in a classical-quantum hybrid mode.
 In this scheme, a parameterized quantum circuit provides a variational ansatz for the ground state. A classical optimizer tunes the circuit parameters to reduce the expected energy of the target Hamiltonian of the output quantum state. There were already several small scale experimental demonstrations of VQE for molecules and quantum magnets~\cite{Shen2017, OMalley2016, Kandala2017,Colless2018, Hempel2018}. These early experiments mostly employed gradient free or Bayesian approaches for classical optimization. Recent progress on unbiased gradient estimation on quantum circuits~\cite{Li2017a, Mitarai2018, Liu2018, Verdon2018, Schuld2018, Javier2018, Bergholm2018, Guerreschi2017,Farhi2018,Romero2018,Harrow2019,Dallaire2018} breaks the information bottleneck between classical and quantum processors, thus
 providing a route towards scalable optimization of circuits with a large number of parameters.
+\begin{figure}[H]
+    \begin{center}
+        \includegraphics[width=0.7\columnwidth,trim={0cm 0.5cm 0cm 1cm},clip]{images/VQE-algo.pdf}
+    \end{center}
+    \caption{A schetch of VQE algorithm, nodes are objectives and lines indicates information flow.}\label{fig-vqe}
+\end{figure}
 
 Quantum differentiable programming approach employs the relation~\cite{Mitarai2018}
 \begin{equation}\label{eq-grad}
