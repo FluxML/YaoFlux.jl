@@ -30,7 +30,6 @@ Manifest.toml
 *.end
 *~
 _*.tex
-*.pdf
 _*.bib
 _temp/
 .DS_store
