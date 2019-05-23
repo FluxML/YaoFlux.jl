@@ -21,7 +21,7 @@ Zygote.@adjoint! function copyto!(xs::AbstractVector, ys::Tuple)
 end
 
 @adjoint function Base.Iterators.Zip(tp)
-    Base.Iterators.Zip(tp), adjy-> ((@show adjy;zip(adjy...)),)
+    Base.Iterators.Zip(tp), adjy-> ([[x...] for x in zip(adjy...)],)
 end
 
 @adjoint function reduce(func, xs; kwargs...)
@@ -84,13 +84,12 @@ end
 end
 
 @adjoint Iterators.reverse(x::T) where T = Iterators.reverse(x), adjy->(collect(Iterators.reverse(adjy)),)  # convert is better
+@adjoint Pair{T1, T2}(a, b) where {T1, T2} = Pair{T1, T2}(a, b), adjy->(adjy.first, adjy.second)
 
 # data projection
 @adjoint function *(sp::Union{SDSparseMatrixCSC, SDDiagonal, SDPermMatrix}, v::AbstractVector)
     sp*v, adjy -> (outer_projection(sp, adjy, v'), sp'*adjy)
 end
-
-@adjoint YaoBlocks.decode_sign(args...) = YaoBlocks.decode_sign(args...), adjy->nothing
 
 @adjoint function *(v::LinearAlgebra.Adjoint{T, V}, sp::Union{SDSparseMatrixCSC, SDDiagonal, SDPermMatrix}) where {T, V<:AbstractVector}
     v*sp, adjy -> (adjy*sp', outer_projection(sp, v', adjy))
@@ -134,3 +133,9 @@ function projection(y::PermMatrix, m::AbstractMatrix)
     res
 end
 projection(x::RT, adjx::Complex) where RT<:Real = RT(real(adjx))
+projection(x::T, y::T) where T = y
+projection(x::T1, y::T2) where {T1, T2} = convert(T1, y)
+
+# fix kron in Zygote if having time
+#function kron_back(a::AbstractMatrix, b::AbstractMatrix, adjy)
+#end

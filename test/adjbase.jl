@@ -50,7 +50,7 @@ end
     function f4(xs)
         reduce((pre,this)->pre+this[1]*this[2], zip(xs, ys), init=0)
     end
-    @test f4'([1,2,3]) |> collect == [6,5,4]
+    @test f4'([1,2,3]) == [6,5,4]
 end
 
 @testset "projection" begin
